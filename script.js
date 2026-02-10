@@ -28,6 +28,8 @@ const SHOW_ICON = "Icons/show.svg";
 
 let currentParsed = null;
 let currentPretty = "";
+let currentOutputText = "";
+let outputMode = "pretty";
 let lastClearSnapshot = null;
 
 const htmlEscapes = {
@@ -324,9 +326,19 @@ function renderTree(parsed) {
 function clearRender() {
   currentParsed = null;
   currentPretty = "";
+  currentOutputText = "";
   outputEl.textContent = "";
   renderTree(null);
   setExtractResult("", "", 0);
+}
+
+function setRenderedOutput(parsed) {
+  if (outputMode === "minified") {
+    currentOutputText = JSON.stringify(parsed);
+  } else {
+    currentOutputText = currentPretty;
+  }
+  renderPrettyOutput(currentOutputText);
 }
 
 function positionToLineColumn(text, position) {
@@ -498,7 +510,7 @@ function tryRender() {
     const parsed = JSON.parse(text);
     currentParsed = parsed;
     currentPretty = JSON.stringify(parsed, null, INDENT);
-    renderPrettyOutput(currentPretty);
+    setRenderedOutput(parsed);
     renderTree(parsed);
     runExtract();
     setStatus("Valid JSON");
@@ -519,6 +531,7 @@ function formatInput() {
   if (parsed === null) {
     return;
   }
+  outputMode = "pretty";
   inputEl.value = JSON.stringify(parsed, null, INDENT);
   persistInput();
   tryRender();
@@ -529,10 +542,11 @@ function minifyInput() {
   if (parsed === null) {
     return;
   }
+  outputMode = "minified";
   inputEl.value = JSON.stringify(parsed);
   persistInput();
   tryRender();
-  setStatus("Minified input (preview/tree still readable)");
+  setStatus("Minified input and output");
 }
 
 function clearAll() {
@@ -548,6 +562,7 @@ function clearAll() {
 
   inputEl.value = "";
   extractInputEl.value = "";
+  outputMode = "pretty";
   localStorage.removeItem(STORAGE_INPUT);
   localStorage.removeItem(STORAGE_EXTRACT);
   clearRender();
@@ -579,13 +594,13 @@ function undoClear() {
 }
 
 async function copyOutput() {
-  if (!currentPretty.trim()) {
+  if (!currentOutputText.trim()) {
     setStatus("Nothing to copy", true);
     return;
   }
 
   try {
-    await navigator.clipboard.writeText(currentPretty);
+    await navigator.clipboard.writeText(currentOutputText);
     setStatus("Output copied");
   } catch {
     setStatus("Clipboard blocked by browser", true);

@@ -129,8 +129,8 @@ button.ghost:hover {
 }
 
 .pane.pane-collapsed {
-  flex: 0 0 52px;
-  min-width: 52px;
+  flex: 0 0 58px;
+  min-width: 58px;
 }
 
 .pane.pane-collapsed > :not(.pane-title-row) {
@@ -138,9 +138,11 @@ button.ghost:hover {
 }
 
 .pane.pane-collapsed .pane-title-row {
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 6px;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
 }
 
 .pane.pane-collapsed .pane-title {
@@ -148,6 +150,14 @@ button.ghost:hover {
   transform: rotate(180deg);
   letter-spacing: 1px;
   max-height: calc(100vh - 180px);
+}
+
+.pane.pane-collapsed .pane-toggle {
+  margin-top: auto;
+}
+
+.quick-pane.pane-collapsed #copySummaryBtn {
+  display: none;
 }
 
 .pane-title,
