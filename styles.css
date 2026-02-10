@@ -83,22 +83,71 @@ button.ghost:hover {
   background: #dbe3ee;
 }
 
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  width: 30px;
+  height: 30px;
+}
+
+.icon-btn img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.pane-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .workspace {
-  display: grid;
-  grid-template-columns: minmax(260px, 28vw) repeat(4, minmax(220px, 1fr));
+  display: flex;
   min-height: calc(100vh - 110px);
 }
 
 .pane {
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
   border-right: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.input-pane {
+  flex: 0 1 28vw;
+  min-width: 240px;
 }
 
 .pane:last-child {
   border-right: none;
+}
+
+.pane.pane-collapsed {
+  flex: 0 0 52px;
+  min-width: 52px;
+}
+
+.pane.pane-collapsed > :not(.pane-title-row) {
+  display: none;
+}
+
+.pane.pane-collapsed .pane-title-row {
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 6px;
+}
+
+.pane.pane-collapsed .pane-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 1px;
+  max-height: calc(100vh - 180px);
 }
 
 .pane-title,
@@ -115,6 +164,15 @@ button.ghost:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pane-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status {
@@ -246,7 +304,7 @@ textarea {
 }
 
 .extract-bar input {
-  min-width: min(380px, 55vw);
+  min-width: 140px;
   flex: 1;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -278,35 +336,6 @@ textarea {
   background: #f7fbff;
 }
 
-.input-toggle {
-  padding: 4px 10px;
-  font-size: 0.78rem;
-}
-
-.app.input-collapsed .workspace {
-  grid-template-columns: 52px repeat(4, minmax(220px, 1fr));
-}
-
-.app.input-collapsed .input-pane textarea {
-  display: none;
-}
-
-.app.input-collapsed .input-pane .pane-title {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  letter-spacing: 1px;
-}
-
-.app.input-collapsed .input-pane .pane-title-row {
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 6px;
-}
-
-.app.input-collapsed .input-toggle {
-  padding: 4px 6px;
-}
-
 .token-key {
   color: #0f766e;
 }
@@ -331,7 +360,7 @@ textarea {
 
 @media (max-width: 900px) {
   .workspace {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     min-height: auto;
   }
 
@@ -339,26 +368,31 @@ textarea {
     border-right: none;
     border-bottom: 1px solid var(--line);
     min-height: 26vh;
+    min-width: 0;
   }
 
   .pane:last-child {
     border-bottom: none;
   }
 
-  .extract-count {
-    margin-left: 0;
+  .pane.pane-collapsed {
+    flex: 0 0 auto;
+    min-height: 44px;
+    min-width: 0;
   }
 
-  .app.input-collapsed .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .app.input-collapsed .input-pane textarea {
-    display: block;
-  }
-
-  .app.input-collapsed .input-pane .pane-title {
+  .pane.pane-collapsed .pane-title {
     writing-mode: horizontal-tb;
     transform: none;
+    max-height: none;
+  }
+
+  .pane.pane-collapsed .pane-title-row {
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+
+  .extract-count {
+    margin-left: 0;
   }
 }

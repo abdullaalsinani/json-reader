@@ -1,5 +1,4 @@
 const inputEl = document.getElementById("jsonInput");
-const appEl = document.querySelector(".app");
 const outputEl = document.getElementById("jsonOutput");
 const treeEl = document.getElementById("treeOutput");
 const statusEl = document.getElementById("status");
@@ -10,20 +9,26 @@ const extractCountEl = document.getElementById("extractCount");
 
 const formatBtn = document.getElementById("formatBtn");
 const minifyBtn = document.getElementById("minifyBtn");
+const undoBtn = document.getElementById("undoBtn");
 const clearBtn = document.getElementById("clearBtn");
 const copyBtn = document.getElementById("copyBtn");
 const extractBtn = document.getElementById("extractBtn");
 const copyExtractBtn = document.getElementById("copyExtractBtn");
-const toggleInputBtn = document.getElementById("toggleInputBtn");
+const copySummaryBtn = document.getElementById("copySummaryBtn");
+
+const paneClasses = ["input-pane", "output-pane", "hierarchy-pane", "extract-pane", "quick-pane"];
 
 const INDENT = 2;
 const MAX_HIGHLIGHT_CHARS = 200000;
 const STORAGE_INPUT = "json-reader.input";
 const STORAGE_EXTRACT = "json-reader.extract";
-const STORAGE_INPUT_COLLAPSED = "json-reader.input-collapsed";
+const STORAGE_PANES = "json-reader.panes";
+const HIDE_ICON = "Icons/hide.svg";
+const SHOW_ICON = "Icons/show.svg";
 
 let currentParsed = null;
 let currentPretty = "";
+let lastClearSnapshot = null;
 
 const htmlEscapes = {
   "&": "&amp;",
@@ -68,15 +73,82 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
-function setInputCollapsed(collapsed) {
-  appEl.classList.toggle("input-collapsed", collapsed);
-  toggleInputBtn.textContent = collapsed ? "Show" : "Hide";
-  localStorage.setItem(STORAGE_INPUT_COLLAPSED, collapsed ? "1" : "0");
+function paneLabel(paneClass) {
+  if (paneClass === "input-pane") {
+    return "input panel";
+  }
+  if (paneClass === "output-pane") {
+    return "output panel";
+  }
+  if (paneClass === "hierarchy-pane") {
+    return "hierarchy panel";
+  }
+  if (paneClass === "extract-pane") {
+    return "extract panel";
+  }
+  return "quick list panel";
 }
 
-function collapseInputOnSubmit() {
-  if (!appEl.classList.contains("input-collapsed")) {
-    setInputCollapsed(true);
+function savePaneStates() {
+  const state = {};
+  paneClasses.forEach((paneClass) => {
+    const pane = document.querySelector(`.${paneClass}`);
+    state[paneClass] = pane ? pane.classList.contains("pane-collapsed") : false;
+  });
+  localStorage.setItem(STORAGE_PANES, JSON.stringify(state));
+}
+
+function updatePaneToggleButton(pane, paneClass) {
+  const toggle = pane.querySelector(".pane-toggle");
+  if (!toggle) {
+    return;
+  }
+
+  const isCollapsed = pane.classList.contains("pane-collapsed");
+  const img = toggle.querySelector("img");
+  if (img) {
+    img.src = isCollapsed ? SHOW_ICON : HIDE_ICON;
+  }
+  const verb = isCollapsed ? "Show" : "Hide";
+  const label = `${verb} ${paneLabel(paneClass)}`;
+  toggle.title = label;
+  toggle.setAttribute("aria-label", label);
+}
+
+function setPaneCollapsed(paneClass, collapsed, persist = true) {
+  const pane = document.querySelector(`.${paneClass}`);
+  if (!pane) {
+    return;
+  }
+
+  pane.classList.toggle("pane-collapsed", collapsed);
+  updatePaneToggleButton(pane, paneClass);
+  if (persist) {
+    savePaneStates();
+  }
+}
+
+function restorePaneStates() {
+  const saved = localStorage.getItem(STORAGE_PANES);
+  if (!saved) {
+    paneClasses.forEach((paneClass) => {
+      setPaneCollapsed(paneClass, false, false);
+    });
+    savePaneStates();
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(saved);
+    paneClasses.forEach((paneClass) => {
+      setPaneCollapsed(paneClass, Boolean(parsed[paneClass]), false);
+    });
+    savePaneStates();
+  } catch {
+    paneClasses.forEach((paneClass) => {
+      setPaneCollapsed(paneClass, false, false);
+    });
+    savePaneStates();
   }
 }
 
@@ -450,7 +522,6 @@ function formatInput() {
   inputEl.value = JSON.stringify(parsed, null, INDENT);
   persistInput();
   tryRender();
-  collapseInputOnSubmit();
 }
 
 function minifyInput() {
@@ -461,19 +532,50 @@ function minifyInput() {
   inputEl.value = JSON.stringify(parsed);
   persistInput();
   tryRender();
-  collapseInputOnSubmit();
   setStatus("Minified input (preview/tree still readable)");
 }
 
 function clearAll() {
+  lastClearSnapshot = {
+    input: inputEl.value,
+    extract: extractInputEl.value,
+    panes: paneClasses.reduce((acc, paneClass) => {
+      const pane = document.querySelector(`.${paneClass}`);
+      acc[paneClass] = pane ? pane.classList.contains("pane-collapsed") : false;
+      return acc;
+    }, {}),
+  };
+
   inputEl.value = "";
   extractInputEl.value = "";
   localStorage.removeItem(STORAGE_INPUT);
   localStorage.removeItem(STORAGE_EXTRACT);
-  setInputCollapsed(false);
   clearRender();
+  undoBtn.disabled = false;
   setStatus("Cleared");
   inputEl.focus();
+}
+
+function undoClear() {
+  if (!lastClearSnapshot) {
+    setStatus("Nothing to undo", true);
+    return;
+  }
+
+  inputEl.value = lastClearSnapshot.input;
+  extractInputEl.value = lastClearSnapshot.extract;
+  localStorage.setItem(STORAGE_INPUT, inputEl.value);
+  localStorage.setItem(STORAGE_EXTRACT, extractInputEl.value);
+
+  paneClasses.forEach((paneClass) => {
+    setPaneCollapsed(paneClass, Boolean(lastClearSnapshot.panes[paneClass]), false);
+  });
+  savePaneStates();
+
+  tryRender();
+  setStatus("Restore complete");
+  lastClearSnapshot = null;
+  undoBtn.disabled = true;
 }
 
 async function copyOutput() {
@@ -499,6 +601,20 @@ async function copyExtractOutput() {
   try {
     await navigator.clipboard.writeText(extractOutputEl.textContent);
     setStatus("Extract copied");
+  } catch {
+    setStatus("Clipboard blocked by browser", true);
+  }
+}
+
+async function copySummaryOutput() {
+  if (!extractSummaryEl.textContent.trim()) {
+    setStatus("No quick list to copy", true);
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(extractSummaryEl.textContent);
+    setStatus("Quick list copied");
   } catch {
     setStatus("Clipboard blocked by browser", true);
   }
@@ -541,15 +657,22 @@ extractInputEl.addEventListener("input", () => {
   runExtract();
 });
 
-extractBtn.addEventListener("click", () => {
-  runExtract();
-  if (currentParsed !== null) {
-    collapseInputOnSubmit();
-  }
-});
+extractBtn.addEventListener("click", runExtract);
 copyExtractBtn.addEventListener("click", copyExtractOutput);
-toggleInputBtn.addEventListener("click", () => {
-  setInputCollapsed(!appEl.classList.contains("input-collapsed"));
+copySummaryBtn.addEventListener("click", copySummaryOutput);
+
+document.querySelectorAll(".pane-toggle").forEach((button) => {
+  button.addEventListener("click", () => {
+    const paneClass = button.dataset.pane;
+    if (!paneClass) {
+      return;
+    }
+    const pane = document.querySelector(`.${paneClass}`);
+    if (!pane) {
+      return;
+    }
+    setPaneCollapsed(paneClass, !pane.classList.contains("pane-collapsed"));
+  });
 });
 
 treeEl.addEventListener("click", async (event) => {
@@ -576,6 +699,7 @@ treeEl.addEventListener("click", async (event) => {
 
 formatBtn.addEventListener("click", formatInput);
 minifyBtn.addEventListener("click", minifyInput);
+undoBtn.addEventListener("click", undoClear);
 clearBtn.addEventListener("click", clearAll);
 copyBtn.addEventListener("click", copyOutput);
 document.addEventListener("keydown", handleKeyboardShortcuts);
@@ -594,6 +718,6 @@ if (savedExtract) {
   extractInputEl.value = savedExtract;
 }
 
-setInputCollapsed(localStorage.getItem(STORAGE_INPUT_COLLAPSED) === "1");
+restorePaneStates();
 
 tryRender();

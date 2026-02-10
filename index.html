@@ -14,6 +14,7 @@
       <div class="actions">
         <button id="formatBtn" type="button">Format</button>
         <button id="minifyBtn" type="button">Minify</button>
+        <button id="undoBtn" type="button" class="ghost" disabled>Undo Clear</button>
         <button id="clearBtn" type="button" class="ghost">Clear</button>
         <button id="copyBtn" type="button" class="ghost">Copy Output</button>
       </div>
@@ -23,7 +24,15 @@
       <section class="pane input-pane">
         <div class="pane-title-row">
           <div class="pane-title">Input JSON</div>
-          <button id="toggleInputBtn" type="button" class="ghost input-toggle">Hide</button>
+          <button
+            type="button"
+            class="ghost icon-btn pane-toggle"
+            data-pane="input-pane"
+            aria-label="Hide input panel"
+            title="Hide input panel"
+          >
+            <img src="Icons/hide.svg" alt="" />
+          </button>
         </div>
         <textarea id="jsonInput" spellcheck="false" placeholder="Paste JSON here..."></textarea>
       </section>
@@ -31,6 +40,15 @@
       <section class="pane output-pane">
         <div class="pane-title-row">
           <div class="pane-title">Output</div>
+          <button
+            type="button"
+            class="ghost icon-btn pane-toggle"
+            data-pane="output-pane"
+            aria-label="Hide output panel"
+            title="Hide output panel"
+          >
+            <img src="Icons/hide.svg" alt="" />
+          </button>
         </div>
         <pre id="jsonOutput" class="output" aria-live="polite"></pre>
       </section>
@@ -38,6 +56,15 @@
       <section class="pane hierarchy-pane">
         <div class="pane-title-row">
           <div class="pane-title">Hierarchy</div>
+          <button
+            type="button"
+            class="ghost icon-btn pane-toggle"
+            data-pane="hierarchy-pane"
+            aria-label="Hide hierarchy panel"
+            title="Hide hierarchy panel"
+          >
+            <img src="Icons/hide.svg" alt="" />
+          </button>
         </div>
         <div id="treeOutput" class="tree-output" aria-live="polite"></div>
       </section>
@@ -45,6 +72,15 @@
       <section class="pane extract-pane">
         <div class="pane-title-row">
           <div class="pane-title">Extract Output</div>
+          <button
+            type="button"
+            class="ghost icon-btn pane-toggle"
+            data-pane="extract-pane"
+            aria-label="Hide extract panel"
+            title="Hide extract panel"
+          >
+            <img src="Icons/hide.svg" alt="" />
+          </button>
         </div>
         <div class="extract-bar">
           <label for="extractInput">Extract</label>
@@ -54,7 +90,9 @@
             spellcheck="false"
             placeholder="tags, results[*], results[0].name"
           />
-          <button id="extractBtn" type="button" class="ghost">Run</button>
+          <button id="extractBtn" type="button" class="ghost icon-btn" aria-label="Run extract" title="Run extract">
+            <img src="Icons/run.svg" alt="" />
+          </button>
           <button id="copyExtractBtn" type="button" class="ghost">Copy Extract</button>
           <span id="extractCount" class="extract-count">0 matches</span>
         </div>
@@ -64,6 +102,20 @@
       <section class="pane quick-pane">
         <div class="pane-title-row">
           <div class="pane-title">Quick List</div>
+          <div class="pane-tools">
+            <button id="copySummaryBtn" type="button" class="ghost icon-btn" aria-label="Copy quick list" title="Copy quick list">
+              <img src="Icons/copy.svg" alt="" />
+            </button>
+            <button
+              type="button"
+              class="ghost icon-btn pane-toggle"
+              data-pane="quick-pane"
+              aria-label="Hide quick list panel"
+              title="Hide quick list panel"
+            >
+              <img src="Icons/hide.svg" alt="" />
+            </button>
+          </div>
         </div>
         <pre id="extractSummary" class="extract-output extract-summary"></pre>
       </section>
