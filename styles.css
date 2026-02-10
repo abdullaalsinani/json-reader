@@ -27,8 +27,8 @@ body {
 }
 
 .app {
-  width: min(1200px, 95vw);
-  margin: 22px auto;
+  width: calc(100vw - 24px);
+  margin: 12px auto;
   background: color-mix(in srgb, var(--card) 90%, #eef6f6);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -38,7 +38,7 @@ body {
 
 .topbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
@@ -56,6 +56,7 @@ h1 {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 button {
@@ -82,20 +83,22 @@ button.ghost:hover {
   background: #dbe3ee;
 }
 
-.panes {
+.workspace {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 72vh;
+  grid-template-columns: minmax(260px, 28vw) repeat(4, minmax(220px, 1fr));
+  min-height: calc(100vh - 110px);
 }
 
 .pane {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--line);
 }
 
-.input-pane {
-  border-right: 1px solid var(--line);
+.pane:last-child {
+  border-right: none;
 }
 
 .pane-title,
@@ -132,7 +135,7 @@ textarea,
   border: none;
   background: transparent;
   font: 13px/1.6 "Consolas", "Cascadia Mono", "SFMono-Regular", monospace;
-  white-space: pre;
+  white-space: pre-wrap;
   overflow: auto;
 }
 
@@ -147,26 +150,12 @@ textarea {
   word-break: break-word;
 }
 
-.output-pane {
-  min-height: 0;
-}
-
-.output-workspace {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 0;
-  flex: 1;
-}
-
-.output-workspace .output {
-  border-right: 1px solid var(--line);
-}
-
 .tree-output {
   overflow: auto;
   padding: 10px 12px;
   background: var(--mono-bg);
   font: 13px/1.55 "Consolas", "Cascadia Mono", "SFMono-Regular", monospace;
+  flex: 1;
 }
 
 .tree-empty {
@@ -277,12 +266,45 @@ textarea {
   margin: 0;
   border-top: 1px solid var(--line);
   background: #fbfdff;
-  min-height: 95px;
-  max-height: 180px;
+  min-height: 0;
   overflow: auto;
   padding: 10px 12px;
   font: 12.5px/1.55 "Consolas", "Cascadia Mono", "SFMono-Regular", monospace;
   color: #0f172a;
+  flex: 1;
+}
+
+.extract-summary {
+  background: #f7fbff;
+}
+
+.input-toggle {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+}
+
+.app.input-collapsed .workspace {
+  grid-template-columns: 52px repeat(4, minmax(220px, 1fr));
+}
+
+.app.input-collapsed .input-pane textarea {
+  display: none;
+}
+
+.app.input-collapsed .input-pane .pane-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 1px;
+}
+
+.app.input-collapsed .input-pane .pane-title-row {
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 6px;
+}
+
+.app.input-collapsed .input-toggle {
+  padding: 4px 6px;
 }
 
 .token-key {
@@ -308,35 +330,35 @@ textarea {
 }
 
 @media (max-width: 900px) {
-  .panes {
+  .workspace {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 
-  .input-pane {
+  .pane {
     border-right: none;
     border-bottom: 1px solid var(--line);
-    min-height: 35vh;
+    min-height: 26vh;
   }
 
-  .output-pane {
-    min-height: 35vh;
-  }
-
-  .output-workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .output-workspace .output {
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-    min-height: 30vh;
-  }
-
-  .tree-output {
-    min-height: 30vh;
+  .pane:last-child {
+    border-bottom: none;
   }
 
   .extract-count {
     margin-left: 0;
+  }
+
+  .app.input-collapsed .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .app.input-collapsed .input-pane textarea {
+    display: block;
+  }
+
+  .app.input-collapsed .input-pane .pane-title {
+    writing-mode: horizontal-tb;
+    transform: none;
   }
 }

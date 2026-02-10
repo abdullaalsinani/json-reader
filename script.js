@@ -1,9 +1,11 @@
 const inputEl = document.getElementById("jsonInput");
+const appEl = document.querySelector(".app");
 const outputEl = document.getElementById("jsonOutput");
 const treeEl = document.getElementById("treeOutput");
 const statusEl = document.getElementById("status");
 const extractInputEl = document.getElementById("extractInput");
 const extractOutputEl = document.getElementById("extractOutput");
+const extractSummaryEl = document.getElementById("extractSummary");
 const extractCountEl = document.getElementById("extractCount");
 
 const formatBtn = document.getElementById("formatBtn");
@@ -12,11 +14,13 @@ const clearBtn = document.getElementById("clearBtn");
 const copyBtn = document.getElementById("copyBtn");
 const extractBtn = document.getElementById("extractBtn");
 const copyExtractBtn = document.getElementById("copyExtractBtn");
+const toggleInputBtn = document.getElementById("toggleInputBtn");
 
 const INDENT = 2;
 const MAX_HIGHLIGHT_CHARS = 200000;
 const STORAGE_INPUT = "json-reader.input";
 const STORAGE_EXTRACT = "json-reader.extract";
+const STORAGE_INPUT_COLLAPSED = "json-reader.input-collapsed";
 
 let currentParsed = null;
 let currentPretty = "";
@@ -64,8 +68,21 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
-function setExtractResult(content, count = 0) {
+function setInputCollapsed(collapsed) {
+  appEl.classList.toggle("input-collapsed", collapsed);
+  toggleInputBtn.textContent = collapsed ? "Show" : "Hide";
+  localStorage.setItem(STORAGE_INPUT_COLLAPSED, collapsed ? "1" : "0");
+}
+
+function collapseInputOnSubmit() {
+  if (!appEl.classList.contains("input-collapsed")) {
+    setInputCollapsed(true);
+  }
+}
+
+function setExtractResult(content, summary, count = 0) {
   extractOutputEl.textContent = content;
+  extractSummaryEl.textContent = summary;
   extractCountEl.textContent = `${count} match${count === 1 ? "" : "es"}`;
 }
 
@@ -94,6 +111,52 @@ function formatPrimitive(value) {
     return JSON.stringify(value);
   }
   return String(value);
+}
+
+function formatBulletValue(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+function pathLabel(pathText) {
+  try {
+    const tokens = tokenizePath(pathText);
+    for (let i = tokens.length - 1; i >= 0; i -= 1) {
+      if (tokens[i].type === "prop") {
+        const key = tokens[i].key;
+        return key.charAt(0).toUpperCase() + key.slice(1);
+      }
+    }
+  } catch {
+    return "Items";
+  }
+  return "Items";
+}
+
+function buildBulletSection(pathText, matches) {
+  const label = pathLabel(pathText);
+
+  if (matches.length === 1 && Array.isArray(matches[0].value)) {
+    const values = matches[0].value;
+    const lines = values.map((value) => `• ${formatBulletValue(value)}`);
+    return `${label} (${values.length}):\n${lines.join("\n")}`;
+  }
+
+  const allPrimitive = matches.every(
+    (match) => match.value === null || ["string", "number", "boolean"].includes(typeof match.value),
+  );
+
+  if (allPrimitive) {
+    const lines = matches.map((match) => `• ${formatBulletValue(match.value)}`);
+    return `${label} (${matches.length}):\n${lines.join("\n")}`;
+  }
+
+  return "";
 }
 
 function renderPrettyOutput(prettyText) {
@@ -191,7 +254,7 @@ function clearRender() {
   currentPretty = "";
   outputEl.textContent = "";
   renderTree(null);
-  setExtractResult("", 0);
+  setExtractResult("", "", 0);
 }
 
 function positionToLineColumn(text, position) {
@@ -323,29 +386,31 @@ function applyExtractPath(source, pathText) {
 
 function runExtract() {
   if (currentParsed === null) {
-    setExtractResult("", 0);
+    setExtractResult("", "", 0);
     return;
   }
 
   const pathText = extractInputEl.value.trim();
   if (!pathText) {
-    setExtractResult("", 0);
+    setExtractResult("", "", 0);
     return;
   }
 
   try {
     const matches = applyExtractPath(currentParsed, pathText);
     if (matches.length === 0) {
-      setExtractResult("No matches", 0);
+      setExtractResult("No matches", "", 0);
       return;
     }
 
-    const rendered = matches
+    const renderedBase = matches
       .map((match) => `${match.path}\n${JSON.stringify(match.value, null, INDENT)}`)
       .join("\n\n");
-    setExtractResult(rendered, matches.length);
+
+    const bulletSection = buildBulletSection(pathText, matches);
+    setExtractResult(renderedBase, bulletSection, matches.length);
   } catch (error) {
-    setExtractResult(String(error.message || error), 0);
+    setExtractResult(String(error.message || error), "", 0);
   }
 }
 
@@ -385,6 +450,7 @@ function formatInput() {
   inputEl.value = JSON.stringify(parsed, null, INDENT);
   persistInput();
   tryRender();
+  collapseInputOnSubmit();
 }
 
 function minifyInput() {
@@ -395,6 +461,7 @@ function minifyInput() {
   inputEl.value = JSON.stringify(parsed);
   persistInput();
   tryRender();
+  collapseInputOnSubmit();
   setStatus("Minified input (preview/tree still readable)");
 }
 
@@ -403,6 +470,7 @@ function clearAll() {
   extractInputEl.value = "";
   localStorage.removeItem(STORAGE_INPUT);
   localStorage.removeItem(STORAGE_EXTRACT);
+  setInputCollapsed(false);
   clearRender();
   setStatus("Cleared");
   inputEl.focus();
@@ -473,8 +541,16 @@ extractInputEl.addEventListener("input", () => {
   runExtract();
 });
 
-extractBtn.addEventListener("click", runExtract);
+extractBtn.addEventListener("click", () => {
+  runExtract();
+  if (currentParsed !== null) {
+    collapseInputOnSubmit();
+  }
+});
 copyExtractBtn.addEventListener("click", copyExtractOutput);
+toggleInputBtn.addEventListener("click", () => {
+  setInputCollapsed(!appEl.classList.contains("input-collapsed"));
+});
 
 treeEl.addEventListener("click", async (event) => {
   const target = event.target;
@@ -517,5 +593,7 @@ if (savedInput && savedInput.trim()) {
 if (savedExtract) {
   extractInputEl.value = savedExtract;
 }
+
+setInputCollapsed(localStorage.getItem(STORAGE_INPUT_COLLAPSED) === "1");
 
 tryRender();
